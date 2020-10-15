@@ -1,17 +1,10 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Collections.Generic;
 
 using static System.Console;
-
-
-Console.Clear();
-
-var cancelSource = new CancellationTokenSource();
 
 var optionIndex = 0;
 var myText = "";
@@ -31,14 +24,13 @@ Func<string> getSearchUri = () => $"{searchMapsUrl}?&key={apiKey}&sessiontoken={
 Func<string, string> getDetailsUrl = (string placeId) => $"{detailsMapsUrl}?&key={apiKey}&sessiontoken={randomSessionToken}&language=ro&place_id={placeId}";
 
 Action refreshConsole = () => {
-    Console.SetCursorPosition(0, 0);
 
-    Write("\r" + new string(' ', Console.WindowWidth) + "\r");    
+    Clear();
     WriteLine(myText);
 
     for (int i = 0; i < lines.Count; i++)
     {
-        Console.SetCursorPosition(0, i + 1);
+        SetCursorPosition(0, i + 1);
         if (optionIndex == i)
         {
             WriteLine($"> {lines[i]}");
@@ -49,34 +41,28 @@ Action refreshConsole = () => {
         }
     }
 
-    Console.SetCursorPosition(myText.Length, 0);
+    SetCursorPosition(myText.Length, 0);
 };
 
 Action callSearchApi = async () => {
 
     var googlePlacesClient = new HttpClient();
 
-    try
+    var response = await googlePlacesClient.GetAsync(getSearchUri());
+
+    if (response.IsSuccessStatusCode)
     {
+        var citiesPrediction =  JsonSerializer.Deserialize<CityPredictions>(await response.Content.ReadAsStringAsync());
+
         lines.Clear();
+        optionIndex = 0;
 
-        var response = await googlePlacesClient.GetAsync(getSearchUri(), cancelSource.Token);
-
-        if (response.IsSuccessStatusCode)
+        foreach(var city in citiesPrediction.Predictions)
         {
-            var citiesPrediction =  JsonSerializer.Deserialize<CityPredictions>(await response.Content.ReadAsStringAsync());
-
-            foreach(var city in citiesPrediction.Predictions)
-            {
-                lines.Add($"{city.Decription} ({city.PlaceId})");
-            }
-
-            refreshConsole();
+            lines.Add($"{city.Decription} ({city.PlaceId})");
         }
-    }
-    catch(OperationCanceledException)
-    {
-        
+
+        refreshConsole();
     }
 };
 
@@ -85,6 +71,8 @@ var myChar = ReadKey();
 
 while(myChar.Key != ConsoleKey.Enter)
 {
+    var needRefresh = true;
+
     if (myChar.Key == ConsoleKey.Backspace)
     {
         if (myText.Length > 0) myText = myText[..^1];
@@ -93,25 +81,30 @@ while(myChar.Key != ConsoleKey.Enter)
     {
         optionIndex = Math.Max(optionIndex - 1, 0);
         refreshConsole();
+
+        needRefresh = false;
     }
     else if (myChar.Key == ConsoleKey.DownArrow)
     {
         optionIndex = Math.Min(optionIndex + 1, lines.Count - 1);
         refreshConsole();
+
+        needRefresh = false;
     }
     else
     {
         myText += myChar.KeyChar;
     }
 
-    Write("\r" + new string(' ', Console.WindowWidth) + "\r");
-    Write(myText);
-
-    if (myText.Length > 3)
+    if (myText.Length > 2)
     {
-        cancelSource.Cancel();
-        cancelSource = new CancellationTokenSource();
-        Task.Run(callSearchApi);
+        if (needRefresh) callSearchApi();
+    }
+    else
+    {
+        lines.Clear();
+        optionIndex = 0;
+        refreshConsole();
     }
 
     myChar = ReadKey();
@@ -119,7 +112,7 @@ while(myChar.Key != ConsoleKey.Enter)
 
 if (lines.Count > 0)
 {
-    Console.Clear();
+    Clear();
     var placeId = lines[optionIndex][(lines[optionIndex].IndexOf('(') + 1)..^1];
 
     var googlePlacesClient = new HttpClient();
