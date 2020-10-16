@@ -24,7 +24,7 @@ Func<string, string> getDetailsUrl = (string placeId) => $"{detailsMapsUrl}?&key
 Action refreshConsole = () => {
 
     Clear();
-    WriteLine(myText);
+    WriteLine($"Search address: {myText}");
 
     for (int i = 0; i < lines.Count; i++)
     {
@@ -39,7 +39,7 @@ Action refreshConsole = () => {
         }
     }
 
-    SetCursorPosition(myText.Length, 0);
+    SetCursorPosition("Search address: ".Length + myText.Length, 0);
 };
 
 Action callSearchApi = async () => {
