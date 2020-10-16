@@ -40,4 +40,12 @@ Notes
   https://developers.google.com/public-data/docs/canonical/countries_csv
 
 
+Best practices for calling APIs:
+- **use** IHttpClientFactory if you can (.net core container & .net core >= 2.1)
+- **do not** instantiate new HttpClient for each call as the connection socket remains open even after dispose
+- **use** streams for content read and deserialization for optimal memory usage
+- **use** to start reading content stream early, wait until headers are read using HttpCompletionOption.ResponseHeadersRead
+- **use** System.Net.Http.Json if you can (.net 5)
+
+
 
