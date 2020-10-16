@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
+using System.Configuration;
 
 using static System.Console;
 
@@ -14,7 +15,17 @@ var lines = new List<string>();
 var searchMapsUrl = "https://maps.googleapis.com/maps/api/place/autocomplete/json";
 var detailsMapsUrl = "https://maps.googleapis.com/maps/api/place/details/json";
 
-var apiKey = "";
+/*
+app.config
+
+<configuration>
+    <appSettings>
+        <add key="api_key" value="" />
+    </appSettings>
+</configuration>
+*/
+
+var apiKey = ConfigurationManager.AppSettings["api_key"];
 var randomSessionToken = System.Guid.NewGuid();
 var language = "ro";
 
