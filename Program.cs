@@ -1,6 +1,6 @@
 using System;
 using System.Net.Http;
-using System.Text.Json;
+using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 
@@ -16,10 +16,12 @@ var detailsMapsUrl = "https://maps.googleapis.com/maps/api/place/details/json";
 
 var apiKey = "";
 var randomSessionToken = System.Guid.NewGuid();
-var languageForDetails = "en";
+var language = "ro";
 
-Func<string> getSearchUri = () => $"{searchMapsUrl}?&key={apiKey}&sessiontoken={randomSessionToken}&types=address&input={myText}";
-Func<string, string> getDetailsUrl = (string placeId) => $"{detailsMapsUrl}?&key={apiKey}&sessiontoken={randomSessionToken}&language={languageForDetails}&place_id={placeId}";
+var client = new HttpClient();
+
+Func<string> getSearchUri = () => $"{searchMapsUrl}?&key={apiKey}&sessiontoken={randomSessionToken}&language={language}&types=address&input={myText}";
+Func<string, string> getDetailsUrl = (string placeId) => $"{detailsMapsUrl}?&key={apiKey}&sessiontoken={randomSessionToken}&language={language}&place_id={placeId}";
 
 Action refreshConsole = () => {
 
@@ -44,24 +46,17 @@ Action refreshConsole = () => {
 
 Action callSearchApi = async () => {
 
-    var googlePlacesClient = new HttpClient();
+    var addressPrediction = await client.GetFromJsonAsync<AddressPrediction>(getSearchUri());
 
-    var response = await googlePlacesClient.GetAsync(getSearchUri());
+    lines.Clear();
+    optionIndex = 0;
 
-    if (response.IsSuccessStatusCode)
+    foreach(var address in addressPrediction.Predictions)
     {
-        var citiesPrediction =  JsonSerializer.Deserialize<CityPredictions>(await response.Content.ReadAsStringAsync());
-
-        lines.Clear();
-        optionIndex = 0;
-
-        foreach(var city in citiesPrediction.Predictions)
-        {
-            lines.Add($"{city.Decription} ({city.PlaceId})");
-        }
-
-        refreshConsole();
+        lines.Add($"{address.Decription} ({address.PlaceId})");
     }
+
+    refreshConsole();
 };
 
 refreshConsole();
@@ -113,50 +108,43 @@ if (lines.Count > 0)
     Clear();
     var placeId = lines[optionIndex][(lines[optionIndex].IndexOf('(') + 1)..^1];
 
-    var googlePlacesClient = new HttpClient();
+    var result = await client.GetFromJsonAsync<Result>(getDetailsUrl(placeId));
 
-    var response = await googlePlacesClient.GetAsync(getDetailsUrl(placeId));
-
-    if (response.IsSuccessStatusCode)
+    foreach(var component in result.AddressDetails.AddressComponents)
     {
-        var cityDetail =  JsonSerializer.Deserialize<Result>(await response.Content.ReadAsStringAsync()).CityDetails;
-
-        foreach(var component in cityDetail.AddressComponents)
+        if (component.Types.Contains("locality"))
         {
-            if (component.Types.Contains("locality"))
-            {
-                WriteLine($"City: {component.LongName}");
-            }
+            WriteLine($"City: {component.LongName}");
+        }
 
-            if (component.Types.Contains("administrative_area_level_1"))
-            {
-                WriteLine($"County: {component.LongName} ({component.ShortName})");
-            }
+        if (component.Types.Contains("administrative_area_level_1"))
+        {
+            WriteLine($"County: {component.LongName} ({component.ShortName})");
+        }
 
-            if (component.Types.Contains("country"))
-            {
-                WriteLine($"Country: {component.LongName} - {component.ShortName}");
-            }
+        if (component.Types.Contains("country"))
+        {
+            WriteLine($"Country: {component.LongName} - {component.ShortName}");
+        }
 
-            if (component.Types.Contains("postal_code"))
-            {
-                WriteLine($"ZipCode: {component.LongName}");
-            }
+        if (component.Types.Contains("postal_code"))
+        {
+            WriteLine($"ZipCode: {component.LongName}");
+        }
 
-            if (component.Types.Contains("route"))
-            {
-                WriteLine($"Street: {component.LongName}");
-            }
+        if (component.Types.Contains("route"))
+        {
+            WriteLine($"Street: {component.LongName}");
+        }
 
-            if (component.Types.Contains("street_number"))
-            {
-                WriteLine($"Street No: {component.LongName}");
-            }
+        if (component.Types.Contains("street_number"))
+        {
+            WriteLine($"Street No: {component.LongName}");
         }
     }
 }
 
-public class CityPredictions
+public class AddressPrediction
 {
     [JsonPropertyName("predictions")] public List<Prediction> Predictions { get; set; }
 }
@@ -168,10 +156,10 @@ public class Prediction
 
 public class Result
 {
-    [JsonPropertyName("result")] public CityDetails CityDetails { get; set; }
+    [JsonPropertyName("result")] public AddressDetails AddressDetails { get; set; }
 }
 
-public class CityDetails
+public class AddressDetails
 {
     [JsonPropertyName("address_components")] public List<AddressComponent> AddressComponents { get; set; }
 }
