@@ -14,14 +14,12 @@ var lines = new List<string>();
 var searchMapsUrl = "https://maps.googleapis.com/maps/api/place/autocomplete/json";
 var detailsMapsUrl = "https://maps.googleapis.com/maps/api/place/details/json";
 
-var centerOfRomania = "45.9432,24.9668";
-var radiusOfRomania = "400000";
-
 var apiKey = "";
 var randomSessionToken = System.Guid.NewGuid();
+var languageForDetails = "en";
 
-Func<string> getSearchUri = () => $"{searchMapsUrl}?&key={apiKey}&sessiontoken={randomSessionToken}&types=(cities)&input={myText}&location={centerOfRomania}&radius={radiusOfRomania}";
-Func<string, string> getDetailsUrl = (string placeId) => $"{detailsMapsUrl}?&key={apiKey}&sessiontoken={randomSessionToken}&language=ro&place_id={placeId}";
+Func<string> getSearchUri = () => $"{searchMapsUrl}?&key={apiKey}&sessiontoken={randomSessionToken}&types=address&input={myText}";
+Func<string, string> getDetailsUrl = (string placeId) => $"{detailsMapsUrl}?&key={apiKey}&sessiontoken={randomSessionToken}&language={languageForDetails}&place_id={placeId}";
 
 Action refreshConsole = () => {
 
@@ -143,6 +141,16 @@ if (lines.Count > 0)
             if (component.Types.Contains("postal_code"))
             {
                 WriteLine($"ZipCode: {component.LongName}");
+            }
+
+            if (component.Types.Contains("route"))
+            {
+                WriteLine($"Street: {component.LongName}");
+            }
+
+            if (component.Types.Contains("street_number"))
+            {
+                WriteLine($"Street No: {component.LongName}");
             }
         }
     }
