@@ -1,11 +1,19 @@
+//#define NET5
+
 using System;
 using System.Net.Http;
-using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
 using System.Configuration;
 
+#if NET5
+using System.Net.Http.Json;
+#else
+using System.Text.Json;
+#endif
+
 using static System.Console;
+
 
 var optionIndex = 0;
 var myText = "";
@@ -30,6 +38,8 @@ var randomSessionToken = System.Guid.NewGuid();
 var language = "ro";
 
 var client = new HttpClient();
+
+
 
 Func<string> getSearchUri = () => $"{searchMapsUrl}?&key={apiKey}&sessiontoken={randomSessionToken}&language={language}&types=address&input={myText}";
 Func<string, string> getDetailsUrl = (string placeId) => $"{detailsMapsUrl}?&key={apiKey}&sessiontoken={randomSessionToken}&language={language}&place_id={placeId}";
@@ -57,7 +67,15 @@ Action refreshConsole = () => {
 
 Action callSearchApi = async () => {
 
+#if NET5
     var addressPrediction = await client.GetFromJsonAsync<AddressPrediction>(getSearchUri());
+#else
+    using var response = await client.GetAsync(getSearchUri(), HttpCompletionOption.ResponseHeadersRead);
+
+    response.EnsureSuccessStatusCode();
+
+    var addressPrediction = await JsonSerializer.DeserializeAsync<AddressPrediction>(await response.Content.ReadAsStreamAsync());
+#endif
 
     lines.Clear();
     optionIndex = 0;
@@ -118,8 +136,17 @@ if (lines.Count > 0)
 {
     Clear();
     var placeId = lines[optionIndex][(lines[optionIndex].IndexOf('(') + 1)..^1];
+    
 
+#if NET5
     var result = await client.GetFromJsonAsync<Result>(getDetailsUrl(placeId));
+#else
+    using var response = await client.GetAsync(getDetailsUrl(placeId), HttpCompletionOption.ResponseHeadersRead);
+
+    response.EnsureSuccessStatusCode();
+
+    var result = await JsonSerializer.DeserializeAsync<Result>(await response.Content.ReadAsStreamAsync());
+#endif
 
     foreach(var component in result.AddressDetails.AddressComponents)
     {
