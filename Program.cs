@@ -82,7 +82,7 @@ Action callSearchApi = async () => {
 
     foreach(var address in addressPrediction.Predictions)
     {
-        lines.Add($"{address.Decription} ({address.PlaceId})");
+        lines.Add($"{address.Description} ({address.PlaceId})");
     }
 
     refreshConsole();
@@ -188,7 +188,7 @@ public class AddressPrediction
 }
 public class Prediction
 {
-    [JsonPropertyName("description")] public string Decription { get; set; }
+    [JsonPropertyName("description")] public string Description { get; set; }
     [JsonPropertyName("place_id")] public string PlaceId { get; set; }    
 }
 
